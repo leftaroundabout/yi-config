@@ -1,0 +1,3 @@
+*.swp
+.ghc.envi*
+dist-newstyle

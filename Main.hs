@@ -12,6 +12,8 @@ import System.Environment
 import Yi hiding (super)
 import Yi.Utils (io)
 import Yi.Modes (gnuMakeMode)
+import Yi.Config.Simple.Types (runConfigM)
+import Yi.Config.Default.HaskellMode (configureHaskellMode)
 import qualified Yi.Keymap.Vim as V
 import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
@@ -30,11 +32,15 @@ import PyflakesMode
 main :: IO ()
 main = do
     files <- getArgs
-    let actions = intersperse (EditorA newTabE) (map (YiA . openNewFile) files)
-    startEditor (myConfig actions) Nothing
+    let openFileActions
+          = intersperse (EditorA newTabE) (map (YiA . openNewFile) files)
+    cfg <- (`execStateT`myConfig) . runConfigM $ do
+           configureHaskellMode
+           startActionsA .= openFileActions
+    startEditor cfg Nothing
 
-myConfig :: [Action] -> Config
-myConfig actions = defaultConfig
+myConfig :: Config
+myConfig = defaultConfig
     { modeTable =
         fmap
             (configureModeline . configureIndent)
@@ -42,12 +48,6 @@ myConfig actions = defaultConfig
     , startFrontEnd = Vty.start
     , defaultKm = myKeymapSet
     , configCheckExternalChangesObsessively = False
-    , startActions =
-        (EditorA (do
-            e <- get
-            put e { maxStatusHeight = 30 }))
-        : YiA guessMakePrg
-        : actions
     }
 
 myKeymapSet :: KeymapSet
@@ -125,10 +125,7 @@ configureModeline = onMode $ \m -> m {modeModeLine = myModeLine}
 
 myModes :: Config -> [AnyMode]
 myModes cfg
-    = AnyMode gnuMakeMode
-    : AnyMode pyflakesMode
-    : AnyMode rainbowParenMode
-    : modeTable cfg
+    = modeTable cfg
 
 exPwd :: V.EventString -> Maybe V.ExCommand
 exPwd "pwd" = Just (V.impureExCommand{V.cmdAction = YiA (io getCurrentDirectory >>= printMsg . T.pack)})

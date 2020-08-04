@@ -47,6 +47,7 @@ executable e
     , yi-keymap-vim
     , yi-language
     , yi-misc-modes
+    , yi-mode-haskell
     , yi-rope
     , yi-snippet
   hs-source-dirs: modules, .
